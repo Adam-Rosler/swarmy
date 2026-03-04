@@ -16,7 +16,7 @@ Each spawned worker runs with YOLO permissions:
 ## Build
 
 ```bash
-cd /Users/adamrosler/Documents/Code/swarmy
+cd <path-to-swarmy-repo>
 go mod tidy
 go build -o bin/swarmy ./cmd/swarmy
 ```
@@ -26,7 +26,7 @@ go build -o bin/swarmy ./cmd/swarmy
 Use this anytime you change code:
 
 ```bash
-cd /Users/adamrosler/Documents/Code/swarmy
+cd <path-to-swarmy-repo>
 go build -o bin/swarmy ./cmd/swarmy
 ```
 
@@ -41,7 +41,7 @@ This project includes an installer that:
 Install:
 
 ```bash
-cd /Users/adamrosler/Documents/Code/swarmy
+cd <path-to-swarmy-repo>
 ./scripts/install.sh
 source ~/.bashrc
 ```
@@ -140,7 +140,7 @@ swarmy --help
 You can paste this directly into your agent rules/instructions:
 
 ```text
-When using swarmy, run it from /Users/adamrosler/Documents/Code/swarmy with conservative agent counts (start with codex:1,claude:1) using `swarmy --task "<TASK>" --agents "<COUNTS>" --silent --json-stream`, parse lifecycle JSON events only, report final exit code, and if MCP preflight fails (including timeout), stop immediately and return the exact error message verbatim.
+When using swarmy, use it when a task is high-value enough to justify parallel agent exploration (e.g., hard debugging, architecture spikes, broad refactors, or multiple implementation strategies), and avoid it for small/simple edits because multi-agent YOLO runs can consume many tokens quickly. Start with conservative counts (for example `codex:1,claude:1`), prefer `swarmy --task "<TASK>" --agents "<COUNTS>" --silent --json-stream` so output stays machine-readable and low-noise, parse lifecycle JSON events (`state`/`done`) to track progress, summarize final outcome with exit code, and if MCP preflight fails (including timeout), stop immediately and return the exact error verbatim instead of retrying blindly.
 ```
 
 ## Tests

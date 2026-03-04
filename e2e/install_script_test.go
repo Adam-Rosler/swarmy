@@ -10,6 +10,15 @@ import (
 	"time"
 )
 
+func projectRoot(t *testing.T) string {
+	t.Helper()
+	_, thisFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("failed to resolve caller path")
+	}
+	return filepath.Clean(filepath.Join(filepath.Dir(thisFile), ".."))
+}
+
 func writeMiniSwarmyRepo(t *testing.T, repo string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Join(repo, "cmd", "swarmy"), 0o755); err != nil {
@@ -31,7 +40,7 @@ func TestInstallScriptAddsAliasLine(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("bash installer test is unix-only")
 	}
-	repoRoot := "/Users/adamrosler/Documents/Code/swarmy"
+	repoRoot := projectRoot(t)
 	rcPath := filepath.Join(t.TempDir(), ".bashrc")
 	if err := os.WriteFile(rcPath, []byte("# test rc\n"), 0o644); err != nil {
 		t.Fatalf("write rc: %v", err)
@@ -58,7 +67,7 @@ func TestSwarmyAutoBuildsIfMissing(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("bash wrapper test is unix-only")
 	}
-	repoRoot := "/Users/adamrosler/Documents/Code/swarmy"
+	repoRoot := projectRoot(t)
 	repo := t.TempDir()
 	writeMiniSwarmyRepo(t, repo)
 
@@ -80,7 +89,7 @@ func TestSwarmyAutoRebuildsWhenSourceNewer(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("bash wrapper test is unix-only")
 	}
-	repoRoot := "/Users/adamrosler/Documents/Code/swarmy"
+	repoRoot := projectRoot(t)
 	repo := t.TempDir()
 	writeMiniSwarmyRepo(t, repo)
 
