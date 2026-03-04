@@ -36,7 +36,6 @@ type Model struct {
 	States    map[string]*agentState
 	Selected  int
 	FocusMode bool
-	Silent    bool
 	Task      string
 	Events    <-chan orchestrator.Event
 	Done      <-chan int
@@ -64,12 +63,11 @@ func NewModel(workers []orchestrator.Worker) Model {
 	return Model{Workers: workers, Order: order, States: states}
 }
 
-func NewLiveModel(workers []orchestrator.Worker, task string, events <-chan orchestrator.Event, done <-chan int, silent bool) Model {
+func NewLiveModel(workers []orchestrator.Worker, task string, events <-chan orchestrator.Event, done <-chan int) Model {
 	m := NewModel(workers)
 	m.Task = task
 	m.Events = events
 	m.Done = done
-	m.Silent = silent
 	return m
 }
 
@@ -116,9 +114,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.Selected = (m.Selected - 1 + len(m.Order)) % len(m.Order)
 			}
 		case "enter":
-			if !m.Silent {
-				m.FocusMode = true
-			}
+			m.FocusMode = true
 		case "esc":
 			m.FocusMode = false
 		}
@@ -133,15 +129,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if msg.event.Line != "" {
 				st.Messages++
-				if m.Silent {
-					st.LastLine = "silent mode: log body hidden"
-				} else {
-					line := formatEventLine(msg.event)
-					st.LastLine = line
-					st.Logs = append(st.Logs, line)
-					if len(st.Logs) > 500 {
-						st.Logs = st.Logs[len(st.Logs)-500:]
-					}
+				line := formatEventLine(msg.event)
+				st.LastLine = line
+				st.Logs = append(st.Logs, line)
+				if len(st.Logs) > 500 {
+					st.Logs = st.Logs[len(st.Logs)-500:]
 				}
 			}
 			if msg.event.Kind == "done" {
@@ -173,15 +165,7 @@ func (m Model) listView() string {
 	if m.Task != "" {
 		b.WriteString(subtleStyle.Render("Task: "+m.Task) + "\n")
 	}
-	keys := "Keys: j/k move, enter focus, esc back, q quit"
-	if m.Silent {
-		keys = "Keys: j/k move, q quit"
-	}
-	b.WriteString(subtleStyle.Render(keys) + "\n")
-	if m.Silent {
-		b.WriteString(subtleStyle.Render("silent mode enabled: live log text is hidden") + "\n")
-	}
-	b.WriteString("\n")
+	b.WriteString(subtleStyle.Render("Keys: j/k move, enter focus, esc back, q quit") + "\n\n")
 	b.WriteString(headerStyle.Render("Idx  Agent      Adapter  State       Msgs  Exit  Last") + "\n")
 	b.WriteString(subtleStyle.Render("---  ---------  -------  ----------  ----  ----  ------------------------------") + "\n")
 	for i, id := range m.Order {
@@ -222,12 +206,8 @@ func (m Model) listView() string {
 		selectedID := m.Order[m.Selected]
 		st := m.States[selectedID]
 		b.WriteString("\n" + headerStyle.Render("Selected: "+selectedID) + "\n")
-		if m.Silent {
-			b.WriteString(subtleStyle.Render("silent mode: drill-down log view disabled") + "\n")
-		} else {
-			for _, line := range tail(st.Logs, 20) {
-				b.WriteString(logStyle.Render(line) + "\n")
-			}
+		for _, line := range tail(st.Logs, 20) {
+			b.WriteString(logStyle.Render(line) + "\n")
 		}
 	}
 	if m.Finished {

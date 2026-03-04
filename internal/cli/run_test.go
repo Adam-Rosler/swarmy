@@ -1,6 +1,10 @@
 package cli
 
-import "testing"
+import (
+	"bytes"
+	"strings"
+	"testing"
+)
 
 func TestParseFlagsRequiresTaskAndAgents(t *testing.T) {
 	if _, err := ParseConfig([]string{"--agents", "codex:1"}); err == nil {
@@ -11,15 +15,14 @@ func TestParseFlagsRequiresTaskAndAgents(t *testing.T) {
 	}
 }
 
-func TestParseFlagsRejectsNoUIAndJSONStreamTogether(t *testing.T) {
+func TestParseFlagsRejectsRemovedNoUIFlag(t *testing.T) {
 	_, err := ParseConfig([]string{
 		"--task", "do thing",
 		"--agents", "codex:1",
 		"--no-ui",
-		"--json-stream",
 	})
 	if err == nil {
-		t.Fatal("expected conflict error for --no-ui and --json-stream")
+		t.Fatal("expected unknown/invalid flag error for removed --no-ui")
 	}
 }
 
@@ -52,13 +55,39 @@ func TestParseFlagsAllowsSilentWithJSONStream(t *testing.T) {
 	}
 }
 
-func TestParseFlagsRejectsSilentWithNoUI(t *testing.T) {
-	if _, err := ParseConfig([]string{
-		"--task", "do thing",
-		"--agents", "codex:1",
-		"--silent",
-		"--no-ui",
-	}); err == nil {
-		t.Fatal("expected error for --silent with --no-ui")
+func TestRunHelpFlagPrintsHelpAndReturnsZero(t *testing.T) {
+	out := &bytes.Buffer{}
+	errBuf := &bytes.Buffer{}
+	exit := Run([]string{"--help"}, out, errBuf)
+	if exit != 0 {
+		t.Fatalf("expected exit 0 for help, got %d", exit)
+	}
+	if !strings.Contains(out.String(), "Usage:") {
+		t.Fatalf("expected help usage in stdout, got: %s", out.String())
+	}
+}
+
+func TestRunShortHelpFlagPrintsHelpAndReturnsZero(t *testing.T) {
+	out := &bytes.Buffer{}
+	errBuf := &bytes.Buffer{}
+	exit := Run([]string{"-h"}, out, errBuf)
+	if exit != 0 {
+		t.Fatalf("expected exit 0 for -h, got %d", exit)
+	}
+	if !strings.Contains(out.String(), "--silent") {
+		t.Fatalf("expected --silent in help output, got: %s", out.String())
+	}
+}
+
+func TestHelpTextIncludesSilentAndJSONFlags(t *testing.T) {
+	help := HelpText()
+	if !strings.Contains(help, "--silent") {
+		t.Fatalf("help missing --silent: %s", help)
+	}
+	if !strings.Contains(help, "--json-stream") {
+		t.Fatalf("help missing --json-stream: %s", help)
+	}
+	if !strings.Contains(help, "preflight") {
+		t.Fatalf("help should explain preflight timeout meaning: %s", help)
 	}
 }

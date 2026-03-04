@@ -42,28 +42,3 @@ func TestModelViewHasColorizedSections(t *testing.T) {
 		t.Fatalf("expected title in view, got: %q", view)
 	}
 }
-
-func TestSilentModeSuppressesLogBody(t *testing.T) {
-	m := NewModel([]orchestrator.Worker{{ID: "codex-1", Adapter: "codex"}})
-	m.Silent = true
-	updated, _ := m.Update(eventMsg{event: orchestrator.Event{Kind: "log", AgentID: "codex-1", State: "running", Line: "private chain of thought"}, ok: true})
-	m2 := updated.(Model)
-	view := m2.View()
-
-	if strings.Contains(view, "private chain of thought") {
-		t.Fatalf("silent mode should hide log body, got: %q", view)
-	}
-	if !strings.Contains(view, "silent") {
-		t.Fatalf("expected silent mode indicator, got: %q", view)
-	}
-}
-
-func TestSilentModeDisablesFocusEnter(t *testing.T) {
-	m := NewModel([]orchestrator.Worker{{ID: "codex-1", Adapter: "codex"}})
-	m.Silent = true
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
-	m2 := updated.(Model)
-	if m2.FocusMode {
-		t.Fatal("silent mode should keep focus mode disabled")
-	}
-}

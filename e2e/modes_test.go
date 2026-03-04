@@ -32,14 +32,12 @@ func writeFakeAgentStderrProgress(t *testing.T, dir, name string) {
 	}
 }
 
-func TestE2ENoUIHappyPathWithFakeCLIs(t *testing.T) {
+func TestE2EJSONStreamOutputsJSONLines(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("shell-script fakes are unix-only")
 	}
 	binDir := t.TempDir()
 	writeFakeAgent(t, binDir, "codex")
-	writeFakeAgent(t, binDir, "claude")
-	writeFakeAgent(t, binDir, "gemini")
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -52,19 +50,27 @@ func TestE2ENoUIHappyPathWithFakeCLIs(t *testing.T) {
 	errBuf := &bytes.Buffer{}
 	exit := cli.Run([]string{
 		"--task", "solve it",
-		"--agents", "codex:1,claude:1,gemini:1",
+		"--agents", "codex:1",
 		"--agent-mail-url", ts.URL,
-		"--no-ui",
+		"--json-stream",
 	}, out, errBuf)
 	if exit != 0 {
 		t.Fatalf("expected exit 0, got %d stderr=%s", exit, errBuf.String())
 	}
-	if !strings.Contains(out.String(), "codex worker start") {
-		t.Fatalf("expected codex output, got: %s", out.String())
+	lines := strings.Split(strings.TrimSpace(out.String()), "\n")
+	if len(lines) == 0 || strings.TrimSpace(lines[0]) == "" {
+		t.Fatalf("expected JSON output lines, got: %q", out.String())
+	}
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(lines[0]), &payload); err != nil {
+		t.Fatalf("expected first line to be JSON, got err: %v line=%q", err, lines[0])
+	}
+	if _, ok := payload["agent_id"]; !ok {
+		t.Fatalf("expected agent_id key in json payload: %v", payload)
 	}
 }
 
-func TestE2ENoUIUsesCleanLevelLabelsNotRawERRPrefix(t *testing.T) {
+func TestE2EJSONStreamUsesInfoForStderrProgress(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("shell-script fakes are unix-only")
 	}
@@ -84,16 +90,27 @@ func TestE2ENoUIUsesCleanLevelLabelsNotRawERRPrefix(t *testing.T) {
 		"--task", "solve it",
 		"--agents", "claude:1",
 		"--agent-mail-url", ts.URL,
-		"--no-ui",
+		"--json-stream",
 	}, out, errBuf)
 	if exit != 0 {
 		t.Fatalf("expected exit 0, got %d stderr=%s", exit, errBuf.String())
 	}
-	if strings.Contains(out.String(), "[ERR]") {
-		t.Fatalf("expected clean level labels, got raw ERR prefix: %s", out.String())
+	lines := strings.Split(strings.TrimSpace(out.String()), "\n")
+	foundInfo := false
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		var payload map[string]any
+		if err := json.Unmarshal([]byte(line), &payload); err != nil {
+			t.Fatalf("json parse failed: %v line=%q", err, line)
+		}
+		if payload["kind"] == "log" && payload["level"] == "info" {
+			foundInfo = true
+		}
 	}
-	if !strings.Contains(out.String(), "|info|") {
-		t.Fatalf("expected info level label in output: %s", out.String())
+	if !foundInfo {
+		t.Fatalf("expected stderr progress to be classified as info; output=%s", out.String())
 	}
 }
 
@@ -175,52 +192,14 @@ func TestE2ESilentJSONStreamOutputsStateKindOnly(t *testing.T) {
 	}
 }
 
-func TestE2ENoUIJSONStreamOutputsJSONLines(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("shell-script fakes are unix-only")
-	}
-	binDir := t.TempDir()
-	writeFakeAgent(t, binDir, "codex")
-
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer ts.Close()
-
-	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
-
-	out := &bytes.Buffer{}
-	errBuf := &bytes.Buffer{}
-	exit := cli.Run([]string{
-		"--task", "solve it",
-		"--agents", "codex:1",
-		"--agent-mail-url", ts.URL,
-		"--json-stream",
-	}, out, errBuf)
-	if exit != 0 {
-		t.Fatalf("expected exit 0, got %d stderr=%s", exit, errBuf.String())
-	}
-	lines := strings.Split(strings.TrimSpace(out.String()), "\n")
-	if len(lines) == 0 || strings.TrimSpace(lines[0]) == "" {
-		t.Fatalf("expected JSON output lines, got: %q", out.String())
-	}
-	var payload map[string]any
-	if err := json.Unmarshal([]byte(lines[0]), &payload); err != nil {
-		t.Fatalf("expected first line to be JSON, got err: %v line=%q", err, lines[0])
-	}
-	if _, ok := payload["agent_id"]; !ok {
-		t.Fatalf("expected agent_id key in json payload: %v", payload)
-	}
-}
-
-func TestE2ENoUIFailsFastWhenServerDown(t *testing.T) {
+func TestE2EPreflightFailsWhenServerDown(t *testing.T) {
 	out := &bytes.Buffer{}
 	errBuf := &bytes.Buffer{}
 	exit := cli.Run([]string{
 		"--task", "solve it",
 		"--agents", "codex:1",
 		"--agent-mail-url", "http://127.0.0.1:1",
-		"--no-ui",
+		"--silent",
 	}, out, errBuf)
 	if exit == 0 {
 		t.Fatalf("expected non-zero exit when server is down")
