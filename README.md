@@ -135,46 +135,12 @@ If the check times out or fails, the run exits immediately.
 swarmy --help
 ```
 
-## Tell Your Agent How To Use Swarmy (Alias Installed)
-
-Use these snippets when `./scripts/install.sh` has already been run and `swarmy` alias is available in the shell.
-
-### Generic instruction
-
-```text
-In /Users/adamrosler/Documents/Code/swarmy:
-1) Run: swarmy --task "<TASK>" --agents "codex:1,claude:2,gemini:1" --silent --json-stream
-2) Parse lifecycle JSON events.
-3) Report final exit code and any preflight failures verbatim.
-```
-
-### Codex prompt
-
-```text
-Run swarmy from /Users/adamrosler/Documents/Code/swarmy using the installed alias:
-swarmy --task "<TASK>" --agents "codex:1,claude:2,gemini:1" --silent --json-stream
-Return only parsed JSON lifecycle events and final exit code.
-```
-
-### Claude/Gemini prompt
-
-```text
-From /Users/adamrosler/Documents/Code/swarmy, execute:
-swarmy --task "<TASK>" --agents "codex:1,claude:2,gemini:1" --silent --json-stream
-If MCP preflight fails, include the exact failure message.
-```
-
 ## Agent Rules Snippet
 
-You can add this to your agent rules/instructions:
+You can paste this directly into your agent rules/instructions:
 
 ```text
-When using swarmy:
-- Assume alias is already installed via scripts/install.sh
-- Use conservative defaults to avoid token burn.
-- Prefer: swarmy --task "<TASK>" --agents "codex:1,claude:1" --silent --json-stream
-- Parse lifecycle JSON events and report final exit code.
-- If preflight fails, stop and return the exact error.
+When using swarmy, run it from /Users/adamrosler/Documents/Code/swarmy with conservative agent counts (start with codex:1,claude:1) using `swarmy --task "<TASK>" --agents "<COUNTS>" --silent --json-stream`, parse lifecycle JSON events only, report final exit code, and if MCP preflight fails (including timeout), stop immediately and return the exact error message verbatim.
 ```
 
 ## Tests
