@@ -140,7 +140,17 @@ swarmy --help
 You can paste this directly into your agent rules/instructions:
 
 ```text
-When using swarmy, use it when a task is high-value enough to justify parallel agent exploration (e.g., hard debugging, architecture spikes, broad refactors, or multiple implementation strategies), and avoid it for small/simple edits because multi-agent YOLO runs can consume many tokens quickly. Start with conservative counts (for example `codex:1,claude:1`), prefer `swarmy --task "<TASK>" --agents "<COUNTS>" --silent --json-stream` so output stays machine-readable and low-noise, parse lifecycle JSON events (`state`/`done`) to track progress, summarize final outcome with exit code, and if MCP preflight fails (including timeout), stop immediately and return the exact error verbatim instead of retrying blindly.
+When using swarmy:
+
+- Use it for high-value tasks that benefit from parallel exploration:
+  hard debugging, architecture spikes, broad refactors, or multiple strategy comparisons.
+- Avoid using it for small/simple edits, because multi-agent YOLO runs can consume many tokens quickly.
+- Start with conservative counts, for example: codex:1,claude:1
+- Prefer this command format for orchestration:
+  swarmy --task "<TASK>" --agents "<COUNTS>" --silent --json-stream
+- Parse lifecycle JSON events (state/done) to track progress.
+- Summarize final outcome with the process exit code.
+- If MCP preflight fails (including timeout), stop immediately and return the exact error verbatim.
 ```
 
 ## Tests
